@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/plugin-api",
+    "crates/effect-api",
+    "crates/extension-api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+ratatui = "0.29"

@@ -1,0 +1,10 @@
+[package]
+name = "xtop-plugin-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared plugin protocol types and host context for xtop"
+repository = "https://github.com/xtop-cli/api"
+
+[dependencies]
+ratatui.workspace = true
