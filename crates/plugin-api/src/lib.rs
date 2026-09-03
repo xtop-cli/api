@@ -11,6 +11,8 @@
 
 pub mod model;
 
+mod color;
+
 mod capability;
 mod context;
 mod error;
@@ -21,6 +23,7 @@ mod provider;
 mod widget;
 
 pub use capability::PluginCapability;
+pub use color::hex_to_rgb;
 pub use context::PluginContext;
 pub use error::PluginError;
 pub use host::{AlertThresholds, HostState, RuntimeConfig};
