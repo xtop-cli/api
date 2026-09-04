@@ -6,7 +6,7 @@
 
 use std::collections::VecDeque;
 
-use xtop_plugin_api::model::SystemSnapshot;
+use xtop_plugin_api::model::{ProcessInfo, SystemSnapshot};
 use xtop_plugin_api::AlertThresholds;
 
 use crate::glyph::{ChartCharset, WidgetBorders};
@@ -45,4 +45,10 @@ pub trait WidgetState {
     fn layout_name(&self) -> &str;
     fn is_searching(&self) -> bool;
     fn fullscreen_label(&self) -> Option<&str>;
+
+    /// The process rows the processes widget draws: the shared per-tick
+    /// sample filtered by the active search query and sorted by the user's
+    /// chosen column. Selection is anchored by PID, so highlight and the
+    /// kill action always agree on the same row.
+    fn process_view(&self) -> Vec<&ProcessInfo>;
 }
