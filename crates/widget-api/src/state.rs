@@ -6,7 +6,7 @@
 
 use std::collections::VecDeque;
 
-use xtop_plugin_api::model::{ProcessInfo, SystemSnapshot};
+use xtop_plugin_api::model::{ProcessInfo, SystemInfo, SystemSnapshot};
 use xtop_plugin_api::AlertThresholds;
 
 use crate::glyph::{ChartCharset, WidgetBorders};
@@ -45,6 +45,7 @@ pub trait WidgetState {
     fn layout_name(&self) -> &str;
     fn is_searching(&self) -> bool;
     fn fullscreen_label(&self) -> Option<&str>;
+    fn sys_info(&self) -> SystemInfo;
 
     /// The process rows the processes widget draws: the shared per-tick
     /// sample filtered by the active search query and sorted by the user's
