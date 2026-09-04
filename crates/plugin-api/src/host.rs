@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Read-only view of the kernel's runtime configuration.
 #[derive(Debug, Clone)]
 pub struct RuntimeConfig {
@@ -8,7 +10,11 @@ pub struct RuntimeConfig {
 }
 
 /// Current alert thresholds.
-#[derive(Debug, Clone)]
+///
+/// Serde round-trips under the plain field names `cpu_high`, `mem_high`,
+/// `disk_high` (no rename attributes), so the kernel can persist this type
+/// in its JSON config with the exact keys it serializes today.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlertThresholds {
     pub cpu_high: f64,
     pub mem_high: f64,
@@ -47,4 +53,29 @@ pub trait HostState {
 
     /// Set the update interval in milliseconds.
     fn set_update_interval_ms(&mut self, ms: u64);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AlertThresholds;
+
+    #[test]
+    fn alert_thresholds_round_trip_under_snake_case_keys() {
+        let alerts = AlertThresholds {
+            cpu_high: 90.0,
+            mem_high: 85.5,
+            disk_high: 88.0,
+        };
+
+        let json = serde_json::to_string(&alerts).unwrap();
+        assert_eq!(
+            json,
+            r#"{"cpu_high":90.0,"mem_high":85.5,"disk_high":88.0}"#
+        );
+
+        let back: AlertThresholds = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.cpu_high, alerts.cpu_high);
+        assert_eq!(back.mem_high, alerts.mem_high);
+        assert_eq!(back.disk_high, alerts.disk_high);
+    }
 }

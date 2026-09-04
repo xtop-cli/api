@@ -16,9 +16,6 @@ pub trait SystemDataProvider: Send {
     fn gpu_info(&self) -> Vec<GpuInfo> {
         vec![]
     }
-    fn docker_info(&self) -> Vec<DockerInfo> {
-        vec![]
-    }
     fn system_info(&self) -> SystemInfo {
         SystemInfo::default()
     }

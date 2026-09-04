@@ -3,5 +3,6 @@ name = "xtop-extension-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
 description = "Shared extension protocol (hooks) for xtop"
 repository = "https://github.com/xtop-cli/api"

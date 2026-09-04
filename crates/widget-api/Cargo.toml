@@ -3,10 +3,14 @@ name = "xtop-widget-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
 description = "Widget renderer contract for xtop: read-only widget state and glyph styles"
 repository = "https://github.com/xtop-cli/api"
 
 [dependencies]
 ratatui.workspace = true
-serde = { version = "1", features = ["derive"] }
+serde.workspace = true
 xtop-plugin-api = { path = "../plugin-api" }
+
+[dev-dependencies]
+serde_json.workspace = true

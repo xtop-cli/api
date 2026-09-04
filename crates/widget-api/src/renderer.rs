@@ -7,14 +7,13 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use ratatui::Frame;
 use ratatui::prelude::Rect;
+use ratatui::Frame;
 
 use crate::state::WidgetState;
 
 /// How a widget draws itself.
-pub type WidgetRenderer =
-    Arc<dyn Fn(&mut Frame, &dyn WidgetState, Rect) + Send + Sync>;
+pub type WidgetRenderer = Arc<dyn Fn(&mut Frame, &dyn WidgetState, Rect) + Send + Sync>;
 
 /// One renderer registration under a widget name.
 pub struct WidgetRegistration {

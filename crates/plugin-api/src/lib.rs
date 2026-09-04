@@ -29,9 +29,9 @@ pub use error::PluginError;
 pub use host::{AlertThresholds, HostState, RuntimeConfig};
 pub use manifest::PluginManifest;
 pub use model::{
-    BatteryInfo, CpuInfo, DiskIOInfo, DiskInfo, DockerInfo, GpuInfo, LoadAvg, MemoryInfo,
-    NetworkInfo, ProcessInfo, SwapInfo, SystemInfo, SystemSnapshot,
+    BatteryInfo, CpuInfo, DiskIOInfo, DiskInfo, GpuInfo, LoadAvg, MemoryInfo, NetworkInfo,
+    ProcessInfo, SwapInfo, SystemInfo, SystemSnapshot,
 };
 pub use plugin::Plugin;
 pub use provider::SystemDataProvider;
-pub use widget::WidgetRegistration;
+pub use widget::PluginWidget;

@@ -7,8 +7,10 @@
 //! This crate defines:
 //!
 //! - [`state::WidgetState`] — the read-only view a renderer receives.
-//! - [`glyph`] — shared glyph choices (chart charsets, border styles).
-//! - [`renderer`] — how packs register renderers by widget name.
+//! - [`glyph`] — shared glyph choices (chart charsets, border styles) and
+//!   the canonical mappings to ratatui (`to_color`, `border_for`,
+//!   `marker_for`) every pack imports.
+//! - [`WidgetRegistration`] — how packs register renderers by widget name.
 //!
 //! It never depends on the kernel, so every repo in the ecosystem can consume
 //! it standalone (the same rule as `xtop-plugin-api`).

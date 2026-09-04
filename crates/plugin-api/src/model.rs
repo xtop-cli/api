@@ -129,14 +129,6 @@ pub struct GpuInfo {
     pub memory_used: u64,
 }
 
-#[derive(Debug, Clone)]
-pub struct DockerInfo {
-    pub name: String,
-    pub status: String,
-    pub cpu_usage: f64,
-    pub memory_usage: u64,
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct SystemInfo {
     pub hostname: String,
@@ -160,6 +152,5 @@ pub struct SystemSnapshot {
     pub disk_io: Vec<DiskIOInfo>,
     pub batteries: Vec<BatteryInfo>,
     pub gpus: Vec<GpuInfo>,
-    pub dockers: Vec<DockerInfo>,
     pub sys_info: SystemInfo,
 }

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::context::PluginContext;
 use crate::provider::SystemDataProvider;
-use crate::widget::WidgetRegistration;
+use crate::widget::PluginWidget;
 use crate::{PluginError, PluginManifest};
 
 /// The core trait that every plugin must implement.
@@ -42,7 +42,11 @@ pub trait Plugin: Debug + Send {
     }
 
     /// Optionally register a custom widget for TUI rendering.
-    fn widget(&self) -> Option<WidgetRegistration> {
+    ///
+    /// The widget renders against the plugin [`HostState`](crate::HostState)
+    /// view; see [`PluginWidget`] (distinct from `xtop-widget-api`'s
+    /// registration type, which draws over `WidgetState`).
+    fn widget(&self) -> Option<PluginWidget> {
         None
     }
 
