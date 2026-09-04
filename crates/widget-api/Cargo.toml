@@ -1,0 +1,12 @@
+[package]
+name = "xtop-widget-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Widget renderer contract for xtop: read-only widget state and glyph styles"
+repository = "https://github.com/xtop-cli/api"
+
+[dependencies]
+ratatui.workspace = true
+serde = { version = "1", features = ["derive"] }
+xtop-plugin-api = { path = "../plugin-api" }

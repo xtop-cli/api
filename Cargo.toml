@@ -4,6 +4,7 @@ members = [
     "crates/plugin-api",
     "crates/effect-api",
     "crates/extension-api",
+    "crates/widget-api",
 ]
 
 [workspace.package]
