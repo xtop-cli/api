@@ -58,7 +58,7 @@ The trait's 28 methods, grouped as in the source:
 | View/control | `fullscreen_label` | `fn fullscreen_label(&self) -> Option<&str>` | fullscreen widget label, `None` when not fullscreen |
 | View/control | `sys_info` | `fn sys_info(&self) -> SystemInfo` | owned machine identity copy |
 | View/control | `process_view` | `fn process_view(&self) -> Vec<&ProcessInfo>` | process rows the processes widget draws |
-| Process mapping | `uid_to_name` | `fn uid_to_name(&self, uid: u32) -> Option<String>` | login name for a numeric uid (kernel resolves from `/etc/passwd` on unix); default `None` — renderers fall back to the numeric uid (UX9.1) |
+| Process mapping | `uid_to_name` | `fn uid_to_name(&self, uid: u32) -> Option<String>` | login name for a numeric uid (kernel resolves from `/etc/passwd` on unix, plus Directory Services users via `dscl` on macOS); default `None` — renderers fall back to the numeric uid (UX9.1) |
 | Process mapping | `process_cpu_history` | `fn process_cpu_history(&self, pid: u32) -> Vec<f64>` | recent per-process CPU-usage samples (percent of one logical core), oldest → newest, ~30 samples per pid; default empty — renderers draw nothing for an empty series (UX9.1) |
 | Layout options | `logical_core_count` | `fn logical_core_count(&self) -> usize` | logical processors the host reports; default `1` reproduces the pre-DR-UX1 behavior for renderers that ignore it |
 | Layout options | `widget_options` | `fn widget_options(&self) -> Option<&serde_json::Value>` | `options` object of the widget being rendered (`None` when the layout node carries none); default `None`; renderers must treat `None` as default behavior |
