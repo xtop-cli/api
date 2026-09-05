@@ -17,7 +17,11 @@ provider (`xtop/src/providers/sysinfo/provider.rs`) and the platform probes
 under `xtop/src/providers/sysinfo/platform/`, which implement the contract's
 `SystemDataProvider`. "Extras" (batteries, GPUs, per-interface IPs, thread
 counts, mount options, governors) come from the platform trees; the sysinfo
-crate provides the rest.
+crate provides the rest. Platform coverage: Linux reads `/sys` and `/proc`;
+macOS implements batteries (`pmset`), interface IPs (`getifaddrs`), mount
+options (`mount(8)`), thread counts (`proc_pidinfo`) and Directory Services
+users (`dscl`) under `platform/macos/`; Windows probes are not implemented
+yet and return empty values.
 
 ## Struct inventory
 
@@ -48,7 +52,7 @@ kernel repo, read-only reference):
 
 | Struct / field | Source |
 |---|---|
-| `CpuInfo { name, usage, cpu_id, frequency, governor, temp_c }` | sysinfo `cpus()` per core; `cpu_id` is the enumeration index; `governor` from the platform probe `read_cpu_governor(i)`; `temp_c` per-core °C from the platform probe `read_core_temps` — Linux coretemp when the sensors map onto the logical cores, `None` everywhere else (macOS/Windows stubs, or Linux hosts without readable per-core sensors) |
+| `CpuInfo { name, usage, cpu_id, frequency, governor, temp_c }` | sysinfo `cpus()` per core; `cpu_id` is the enumeration index; `governor` from the platform probe `read_cpu_governor(i)`; `temp_c` per-core °C from the platform probe `read_core_temps` — Linux coretemp when the sensors map onto the logical cores, `None` everywhere else (macOS has no per-core sensor source, Windows probe not implemented yet, or Linux hosts without readable per-core sensors) |
 | `MemoryInfo { total, used, available, free, percent }` | sysinfo memory getters; `percent = used/total*100`, `0.0` when total is 0 |
 | `SwapInfo { total, used, free, percent }` | sysinfo swap getters; same percent rule |
 | `DiskInfo { mount_point, total_space, available_space, used_space, percent, file_system, mount_options }` | sysinfo `Disks`; `used = total - available`; `mount_options` looked up from the platform probe `read_mount_options()` |
@@ -56,10 +60,10 @@ kernel repo, read-only reference):
 | `NetworkInfo { name, received, transmitted, rx_speed, tx_speed, ip }` | sysinfo `Networks`; speeds computed from deltas since the previous refresh; `ip` from `read_interface_ips()` |
 | `ProcessInfo` | sysinfo `processes()` (see the P0/P1/P2 groups below) |
 | `LoadAvg { one, five, fifteen }` | `System::load_average()` |
-| `BatteryInfo` | platform `read_batteries()` (not sysinfo core) |
+| `BatteryInfo` | platform `read_batteries()` — Linux `/sys/class/power_supply`, macOS `pmset`; Windows/fallback empty |
 | `GpuInfo` | `read_gpu_info()`: shared nvidia-smi probe first, then the platform sysfs fallback when the list is empty |
 | `SystemInfo { hostname, os_version, kernel, desktop_env, shell, cpu_model, package_power_w }` | host/os/kernel/desktop/shell captured **once at provider construction**: `System::host_name()`, `System::long_os_version()`, `System::kernel_version()`, `XDG_CURRENT_DESKTOP`/`DESKTOP_SESSION`, `SHELL`/`ComSpec`; cached on the provider. `cpu_model` = the sysinfo CPU **brand** string of the first logical core at construction (`System::cpus()[0].brand()`, e.g. "Intel(R) Core(TM) i7-14650HX"); sysinfo fills it on every platform it supports — an empty brand yields `None`. `package_power_w` is sampled **every refresh** from the Linux RAPL probe (see below); `None` when no readable RAPL source exists |
-| `SystemInfo::package_power_w` (Linux RAPL probe) | instantaneous package power in watts, computed from Intel RAPL energy-counter **deltas** at the refresh cadence. Sources, in priority order: (1) `/sys/class/powercap/intel-rapl:<n>/energy_uj` for every domain whose `name` file reads `package-0` (one per socket; the readings are summed), falling back to the lowest-index `intel-rapl:<n>` domain when no `name` matches; (2) hwmon `energy*_input` under `/sys/class/hwmon/hwmon*/name` == `powercap`, first sensor only. Readings are in microjoules; wattage = `delta_energy_uj / 1_000_000 / elapsed_secs` with wrap-around-safe deltas (counters wrap at `max_energy_range_uj`). The first sample after boot establishes a baseline and yields `None` (no previous counter); an unreadable source (absent driver, permission denied, transient read failure) also yields `None` and resets the baseline — the value is never fabricated. macOS/Windows/fallback platforms stub the probe to `None` |
+| `SystemInfo::package_power_w` (Linux RAPL probe) | instantaneous package power in watts, computed from Intel RAPL energy-counter **deltas** at the refresh cadence. Sources, in priority order: (1) `/sys/class/powercap/intel-rapl:<n>/energy_uj` for every domain whose `name` file reads `package-0` (one per socket; the readings are summed), falling back to the lowest-index `intel-rapl:<n>` domain when no `name` matches; (2) hwmon `energy*_input` under `/sys/class/hwmon/hwmon*/name` == `powercap`, first sensor only. Readings are in microjoules; wattage = `delta_energy_uj / 1_000_000 / elapsed_secs` with wrap-around-safe deltas (counters wrap at `max_energy_range_uj`). The first sample after boot establishes a baseline and yields `None` (no previous counter); an unreadable source (absent driver, permission denied, transient read failure) also yields `None` and resets the baseline — the value is never fabricated. macOS keeps `None` (no RAPL; SMC power keys are Intel-only and model-specific); Windows and fallback platforms stub the probe to `None` |
 | `SystemSnapshot::cpu_temp` | maximum temperature over sysinfo `Components` |
 | `SystemSnapshot::uptime` | `System::uptime()` (seconds) |
 
@@ -86,12 +90,12 @@ covered by this set — no fields were added: `cmd`/`cmd_full`/`exe_path`
 carry the program and its command line, and `user_id` (plus
 `effective_user_id`) carries the numeric uid as a string. The uid → login
 name mapping is **not** part of the data model (it is a display mapping):
-widgets resolve it through `WidgetState::uid_to_name(uid)` (widget-api,
-kernel reads `/etc/passwd` on unix) and fall back to the numeric uid when no
-name exists. The recent per-process CPU samples a braille spark draws also
-live on the widget view, not in the model: `WidgetState::process_cpu_history(pid)`
-returns the bounded per-pid series the kernel feeds each tick (see
-widget-contract.md).
+widgets resolve it through `WidgetState::uid_to_name(uid)` (widget-api; the
+kernel reads `/etc/passwd` on unix plus Directory Services users on macOS)
+and fall back to the numeric uid when no name exists. The recent per-process
+CPU samples a braille spark draws also live on the widget view, not in the
+model: `WidgetState::process_cpu_history(pid)` returns the bounded per-pid
+series the kernel feeds each tick (see widget-contract.md).
 
 Two ordering rules apply to `snapshot().processes`:
 

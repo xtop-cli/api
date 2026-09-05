@@ -174,7 +174,7 @@ form because restoring means deleting the section.
 - CI is local only: `./scripts/ci.sh [fmt|clippy|check|test]` from the repo
   root (fmt check, clippy `-D warnings`, workspace check/test). No GitHub
   workflows exist or are added (workspace rule).
-- The workspace carries 13 tests (plugin-api 5, widget-api 6, effect-api 2;
+- The workspace carries 16 tests (plugin-api 5, widget-api 9, effect-api 2;
   extension-api none yet) covering capability gating, `top_processes`
   ordering, the `AlertThresholds` serde contract, the glyph mapping tables
   and a fake-frame effect test. `cargo doc --workspace --no-deps` builds
