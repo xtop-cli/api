@@ -10,7 +10,5 @@ repository = "https://github.com/xtop-cli/api"
 [dependencies]
 ratatui.workspace = true
 serde.workspace = true
-xtop-plugin-api = { path = "../plugin-api" }
-
-[dev-dependencies]
 serde_json.workspace = true
+xtop-plugin-api = { path = "../plugin-api" }

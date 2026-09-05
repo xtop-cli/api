@@ -23,14 +23,14 @@ ratatui (for `Frame`, `Rect`, `Marker`, border sets), serde (for the glyph
 enums) and `xtop-plugin-api` (for the data model its `WidgetState` methods
 name).
 
-## `WidgetState` — the renderer's view (20 methods)
+## `WidgetState` — the renderer's view (28 methods)
 
 Every renderer draws against this trait — never against kernel types. The
 kernel implements it over its live `AppState` (`xtop/src/state/widget_state.rs`)
 and the render engine hands it to the pack renderers. Read-only by design:
 widgets never mutate app state.
 
-The trait's 20 methods, grouped as in the source:
+The trait's 28 methods, grouped as in the source:
 
 | Group | Method | Signature | Meaning |
 |---|---|---|---|
@@ -46,14 +46,46 @@ The trait's 20 methods, grouped as in the source:
 | History | `mem_history` | `fn mem_history(&self) -> &VecDeque<(f64, f64)>` | memory percent history |
 | History | `net_rx_history` | `fn net_rx_history(&self) -> &VecDeque<(f64, f64)>` | summed receive **rate** history (bytes/s) |
 | History | `net_tx_history` | `fn net_tx_history(&self) -> &VecDeque<(f64, f64)>` | summed transmit rate history (bytes/s) |
+| History | `disk_read_history` | `fn disk_read_history(&self) -> &VecDeque<(f64, f64)>` | summed disk **read** rate history (bytes/s, aggregate across disks); default empty |
+| History | `disk_write_history` | `fn disk_write_history(&self) -> &VecDeque<(f64, f64)>` | summed disk **write** rate history (bytes/s, aggregate across disks); default empty |
+| History | `load_history` | `fn load_history(&self) -> &VecDeque<(f64, f64)>` | 1-minute load-average history (`load_avg.one`); default empty |
 | View/control | `search_query` | `fn search_query(&self) -> &str` | active process search text |
 | View/control | `process_selected_pid` | `fn process_selected_pid(&self) -> Option<u32>` | selected row, anchored by PID |
 | View/control | `process_sort_label` | `fn process_sort_label(&self) -> &str` | label of the active sort column |
+| View/control | `process_sort_desc` | `fn process_sort_desc(&self) -> bool` | whether the active process sorting is descending; default `false` (ascending) reproduces the pre-direction behavior for implementors that do not track a direction |
 | View/control | `layout_name` | `fn layout_name(&self) -> &str` | active layout name |
 | View/control | `is_searching` | `fn is_searching(&self) -> bool` | search overlay active |
 | View/control | `fullscreen_label` | `fn fullscreen_label(&self) -> Option<&str>` | fullscreen widget label, `None` when not fullscreen |
 | View/control | `sys_info` | `fn sys_info(&self) -> SystemInfo` | owned machine identity copy |
 | View/control | `process_view` | `fn process_view(&self) -> Vec<&ProcessInfo>` | process rows the processes widget draws |
+| Process mapping | `uid_to_name` | `fn uid_to_name(&self, uid: u32) -> Option<String>` | login name for a numeric uid (kernel resolves from `/etc/passwd` on unix); default `None` — renderers fall back to the numeric uid (UX9.1) |
+| Process mapping | `process_cpu_history` | `fn process_cpu_history(&self, pid: u32) -> Vec<f64>` | recent per-process CPU-usage samples (percent of one logical core), oldest → newest, ~30 samples per pid; default empty — renderers draw nothing for an empty series (UX9.1) |
+| Layout options | `logical_core_count` | `fn logical_core_count(&self) -> usize` | logical processors the host reports; default `1` reproduces the pre-DR-UX1 behavior for renderers that ignore it |
+| Layout options | `widget_options` | `fn widget_options(&self) -> Option<&serde_json::Value>` | `options` object of the widget being rendered (`None` when the layout node carries none); default `None`; renderers must treat `None` as default behavior |
+
+The five methods under "Layout options" and "Process mapping" (DR-UX1/UX3/
+UX5/UX9.1 additions) come with **default impls**, so existing implementors
+compile unchanged and output without `options` is byte-identical to the
+pre-options behavior. `logical_core_count` lets a renderer normalize a
+per-process (or per-core) CPU usage — a fraction of one logical core — into
+a share of the whole machine's CPU (`CpuBasis::Total` display); the kernel
+implements it from `available_parallelism`. `widget_options` carries the
+per-instance display options from the layout node while that widget is
+drawn; the value is never `null`, is only valid during the render call, and
+unknown keys must be ignored. `process_sort_desc` feeds the processes
+widget's direction marker (`▼` descending / `▲` ascending) on the sorted
+column header; the kernel returns its live `cycle_sort` flag. The three
+History methods added for the UX8 data surface (`disk_read_history`,
+`disk_write_history`, `load_history`) also ship with default empty
+implementations: they are bounded histories the kernel feeds per tick
+(aggregate disk rates in bytes/s and the 1-minute load average), and
+implementors that do not track them yet keep compiling unchanged. The two
+UX9.1 process helpers default to `None` / an empty series: `uid_to_name`
+resolves a numeric uid to a login name (the uid→name mapping is a display
+concern and deliberately lives on the state view, not in the data model —
+renderers fall back to the numeric uid), and `process_cpu_history` returns
+the bounded per-process CPU samples (oldest → newest) for a small braille
+spark, empty for untracked pids.
 
 Semantics worth noting:
 
@@ -63,7 +95,10 @@ Semantics worth noting:
   contract already returned the effective choice for the named widget.
 - **History is `(f64, f64)` pairs** — x (tick/elapsed coordinate) and y
   (value), the shape ratatui `Chart` datasets consume. Network history
-  tracks rates, not cumulative counters, so charts show throughput.
+  tracks rates, not cumulative counters, so charts show throughput; the
+  same holds for the disk read/write rate histories (aggregate bytes/s
+  across disks). `load_history` tracks the 1-minute load average. All
+  histories are bounded to the kernel's `history_points`.
 - **`process_view`** is the single per-tick sample filtered by the active
   search query and sorted by the user's chosen column; selection is anchored
   by PID so highlight and the kill action always agree on the same row.
