@@ -9,6 +9,13 @@ pub struct CpuInfo {
     pub cpu_id: usize,
     pub frequency: u64,
     pub governor: String,
+    /// Per-core temperature in °C when the platform provides it.
+    ///
+    /// Linux populates it from the `coretemp` sensors when a per-core
+    /// sensor exists and maps 1:1 onto the logical cores (see the kernel
+    /// docs); macOS/Windows stubs leave `None`. `None` means "not
+    /// available" — widgets must hide the value gracefully.
+    pub temp_c: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +143,25 @@ pub struct SystemInfo {
     pub kernel: String,
     pub desktop_env: String,
     pub shell: String,
+
+    /// CPU model / brand string (e.g. "Intel(R) Core(TM) i7-14650HX") when
+    /// the platform reports it; `None` otherwise.
+    ///
+    /// Filled from the sysinfo CPU brand of the first logical core on every
+    /// platform sysinfo covers (a library fact, not an OS-specific probe);
+    /// `None` when sysinfo reports an empty brand. Widgets may show it in a
+    /// title or spec line and must hide the value when `None`.
+    pub cpu_model: Option<String>,
+
+    /// Instantaneous package power draw in watts when the machine exposes a
+    /// readable RAPL energy source; `None` otherwise.
+    ///
+    /// Linux fills it from the Intel RAPL package energy counters read at the
+    /// kernel refresh cadence (see the api data model for the exact sources);
+    /// macOS/Windows/fallback platforms and Linux hosts without a readable
+    /// RAPL source keep `None`. The caller must never fabricate the value —
+    /// `None` means "not measurable", and widgets hide the readout.
+    pub package_power_w: Option<f64>,
 }
 
 #[derive(Debug, Clone)]

@@ -34,7 +34,7 @@ crate provides the rest.
 | `LoadAvg` | 1/5/15-minute load averages. |
 | `BatteryInfo` | One battery (platform probe). |
 | `GpuInfo` | One GPU (nvidia-smi probe, sysfs fallback). |
-| `SystemInfo` | Slowly changing machine identity (hostname, OS, kernel, desktop, shell). |
+| `SystemInfo` | Slowly changing machine identity (hostname, OS, kernel, desktop, shell, CPU model, package power). |
 
 `SystemSnapshot` fields: `cpus`, `memory`, `swap`, `disks`, `networks`,
 `processes`, `load_avg`, `uptime`, `cpu_temp`, `disk_io`, `batteries`,
@@ -48,7 +48,7 @@ kernel repo, read-only reference):
 
 | Struct / field | Source |
 |---|---|
-| `CpuInfo { name, usage, cpu_id, frequency, governor }` | sysinfo `cpus()` per core; `cpu_id` is the enumeration index; `governor` from the platform probe `read_cpu_governor(i)` |
+| `CpuInfo { name, usage, cpu_id, frequency, governor, temp_c }` | sysinfo `cpus()` per core; `cpu_id` is the enumeration index; `governor` from the platform probe `read_cpu_governor(i)`; `temp_c` per-core °C from the platform probe `read_core_temps` — Linux coretemp when the sensors map onto the logical cores, `None` everywhere else (macOS/Windows stubs, or Linux hosts without readable per-core sensors) |
 | `MemoryInfo { total, used, available, free, percent }` | sysinfo memory getters; `percent = used/total*100`, `0.0` when total is 0 |
 | `SwapInfo { total, used, free, percent }` | sysinfo swap getters; same percent rule |
 | `DiskInfo { mount_point, total_space, available_space, used_space, percent, file_system, mount_options }` | sysinfo `Disks`; `used = total - available`; `mount_options` looked up from the platform probe `read_mount_options()` |
@@ -58,7 +58,8 @@ kernel repo, read-only reference):
 | `LoadAvg { one, five, fifteen }` | `System::load_average()` |
 | `BatteryInfo` | platform `read_batteries()` (not sysinfo core) |
 | `GpuInfo` | `read_gpu_info()`: shared nvidia-smi probe first, then the platform sysfs fallback when the list is empty |
-| `SystemInfo { hostname, os_version, kernel, desktop_env, shell }` | captured **once at provider construction**: `System::host_name()`, `System::long_os_version()`, `System::kernel_version()`, `XDG_CURRENT_DESKTOP`/`DESKTOP_SESSION`, `SHELL`/`ComSpec`; cached on the provider |
+| `SystemInfo { hostname, os_version, kernel, desktop_env, shell, cpu_model, package_power_w }` | host/os/kernel/desktop/shell captured **once at provider construction**: `System::host_name()`, `System::long_os_version()`, `System::kernel_version()`, `XDG_CURRENT_DESKTOP`/`DESKTOP_SESSION`, `SHELL`/`ComSpec`; cached on the provider. `cpu_model` = the sysinfo CPU **brand** string of the first logical core at construction (`System::cpus()[0].brand()`, e.g. "Intel(R) Core(TM) i7-14650HX"); sysinfo fills it on every platform it supports — an empty brand yields `None`. `package_power_w` is sampled **every refresh** from the Linux RAPL probe (see below); `None` when no readable RAPL source exists |
+| `SystemInfo::package_power_w` (Linux RAPL probe) | instantaneous package power in watts, computed from Intel RAPL energy-counter **deltas** at the refresh cadence. Sources, in priority order: (1) `/sys/class/powercap/intel-rapl:<n>/energy_uj` for every domain whose `name` file reads `package-0` (one per socket; the readings are summed), falling back to the lowest-index `intel-rapl:<n>` domain when no `name` matches; (2) hwmon `energy*_input` under `/sys/class/hwmon/hwmon*/name` == `powercap`, first sensor only. Readings are in microjoules; wattage = `delta_energy_uj / 1_000_000 / elapsed_secs` with wrap-around-safe deltas (counters wrap at `max_energy_range_uj`). The first sample after boot establishes a baseline and yields `None` (no previous counter); an unreadable source (absent driver, permission denied, transient read failure) also yields `None` and resets the baseline — the value is never fabricated. macOS/Windows/fallback platforms stub the probe to `None` |
 | `SystemSnapshot::cpu_temp` | maximum temperature over sysinfo `Components` |
 | `SystemSnapshot::uptime` | `System::uptime()` (seconds) |
 
@@ -79,6 +80,18 @@ P0/P1/P2 markers below follow the provider source):
   `disk_total_write_bytes`, `environ`, `session_id`.
 
 Field count: 22 (7 base + 3 P0 + 6 P1 + 6 P2).
+
+The UX9.1 process row needs (program + command + user name) are fully
+covered by this set — no fields were added: `cmd`/`cmd_full`/`exe_path`
+carry the program and its command line, and `user_id` (plus
+`effective_user_id`) carries the numeric uid as a string. The uid → login
+name mapping is **not** part of the data model (it is a display mapping):
+widgets resolve it through `WidgetState::uid_to_name(uid)` (widget-api,
+kernel reads `/etc/passwd` on unix) and fall back to the numeric uid when no
+name exists. The recent per-process CPU samples a braille spark draws also
+live on the widget view, not in the model: `WidgetState::process_cpu_history(pid)`
+returns the bounded per-pid series the kernel feeds each tick (see
+widget-contract.md).
 
 Two ordering rules apply to `snapshot().processes`:
 

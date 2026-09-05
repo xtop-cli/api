@@ -17,9 +17,11 @@
 
 pub mod glyph;
 
+mod options;
 mod renderer;
 mod state;
 
 pub use glyph::{ChartCharset, WidgetBorders};
+pub use options::CpuBasis;
 pub use renderer::{WidgetRegistration, WidgetRenderer};
 pub use state::WidgetState;
