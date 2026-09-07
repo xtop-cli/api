@@ -13,8 +13,9 @@ pub struct CpuInfo {
     ///
     /// Linux populates it from the `coretemp` sensors when a per-core
     /// sensor exists and maps 1:1 onto the logical cores (see the kernel
-    /// docs); macOS/Windows stubs leave `None`. `None` means "not
-    /// available" — widgets must hide the value gracefully.
+    /// docs); macOS (no public per-core keys) and Windows (thermal zones
+    /// are aggregate only) leave `None`. `None` means "not available" —
+    /// widgets must hide the value gracefully.
     pub temp_c: Option<f32>,
 }
 
@@ -158,8 +159,8 @@ pub struct SystemInfo {
     ///
     /// Linux fills it from the Intel RAPL package energy counters read at the
     /// kernel refresh cadence (see the api data model for the exact sources);
-    /// macOS/Windows/fallback platforms and Linux hosts without a readable
-    /// RAPL source keep `None`. The caller must never fabricate the value —
+    /// macOS and Windows have no public package-power source and fallback
+    /// platforms keep `None`. The caller must never fabricate the value —
     /// `None` means "not measurable", and widgets hide the readout.
     pub package_power_w: Option<f64>,
 }
