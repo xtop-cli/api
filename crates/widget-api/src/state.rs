@@ -115,8 +115,9 @@ pub trait WidgetState {
     /// numeric uid when `None` is returned (uid→name is a display mapping,
     /// deliberately not part of the data model). The kernel resolves names
     /// from `/etc/passwd` on unix platforms, plus Directory Services users
-    /// (`dscl`) on macOS; on platforms without those sources the map is
-    /// empty and every uid yields `None`. The default `None`
+    /// (`dscl`) on macOS and local accounts (`Get-LocalUser`, numeric RIDs)
+    /// on Windows; on platforms without those sources the map is empty and
+    /// every uid yields `None`. The default `None`
     /// reproduces the numeric fallback for implementors that do not resolve
     /// names.
     fn uid_to_name(&self, _uid: u32) -> Option<String> {
